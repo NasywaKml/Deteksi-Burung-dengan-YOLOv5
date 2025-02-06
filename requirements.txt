@@ -4,4 +4,4 @@ pillow
 torch
 torchvision
 numpy
-ultralytics==8.0.20
+git+https://github.com/ultralytics/yolov5.git
