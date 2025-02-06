@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 
 # Memuat model YOLOv5 menggunakan Torch Hub
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='models/best.pt')
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='models/best.pt', trust_repo=True)
 
 # UI Aplikasi Streamlit
 st.title("Deteksi Burung dengan YOLOv5")
