@@ -3,73 +3,85 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
-from models.experimental import attempt_load
-from utils.general import non_max_suppression, scale_coords
-from utils.torch_utils import select_device
 
-# Memuat model YOLOv5 secara lokal
-device = select_device('cpu')  # Gunakan 'cuda' jika tersedia
-model = attempt_load("models/best.pt", map_location=device)
-model.eval()
+# Memuat model YOLOv5 menggunakan Torch Hub
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='D:\\Documents\\dokumen pribadi\\File Telkom\\AI LAB\\Tubes\\Bird_Detection\\best.pt') #Diubah sesuai alamat file model
 
 # UI Aplikasi Streamlit
 st.title("Deteksi Burung dengan YOLOv5")
 st.sidebar.title("Pilihan")
 
-# Pilihan mode deteksi
-mode = st.sidebar.radio("Pilih mode:", ["Upload Video", "Upload Gambar"])
+# Memilih mode dengan radio button
+mode = st.sidebar.radio("Pilih mode:", ["Live Webcam", "Upload Video", "Upload Gambar"])
 
-# Fungsi deteksi objek pada gambar
+# Fungsi pembantu untuk mendeteksi objek pada gambar
 def detect_objects(img):
-    img_resized = cv2.resize(img, (640, 640))  # Resize gambar ke ukuran model
-    img_tensor = torch.from_numpy(img_resized).to(device).float()
-    img_tensor /= 255.0  # Normalisasi
-    img_tensor = img_tensor.unsqueeze(0).permute(0, 3, 1, 2)  # Format ke [batch, channel, height, width]
-
-    with torch.no_grad():
-        pred = model(img_tensor)[0]
-        pred = non_max_suppression(pred, 0.5, 0.45)[0]  # Filter prediksi
-
+    # Melakukan deteksi objek dengan model
+    results = model(img)
     detected_img = img.copy()
-    if pred is not None:
-        for det in pred:
-            x1, y1, x2, y2, conf, cls = det
-            label = f"{conf:.2f}"
+    
+    # Menambahkan kotak deteksi dan label pada gambar
+    for detection in results.xyxy[0]:
+        x1, y1, x2, y2, conf, cls = detection
+        if conf > 0.5:  # Batas kepercayaan deteksi
+            label = f"{model.names[int(cls)]}: {conf:.2f}"
             cv2.rectangle(detected_img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-            cv2.putText(detected_img, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-
+            cv2.putText(detected_img, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_COMPLEX, 0.9, (255, 0, 0), 2)
     return detected_img
 
-# Mode Upload Gambar
-if mode == "Upload Gambar":
-    st.write("Mode Upload Gambar")
-    uploaded_image = st.file_uploader("Unggah file gambar", type=["jpg", "png", "jpeg"])
-    
-    if uploaded_image:
-        img = np.array(Image.open(uploaded_image))
-        detected_image = detect_objects(img)
-        st.image(detected_image, caption="Objek yang Terdeteksi", use_container_width=True)
+if mode == "Live Webcam":
+    st.write("Mode Webcam Langsung")
+    FRAME_WINDOW = st.image([])
 
-# Mode Upload Video
+    # Membuka koneksi ke webcam
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        st.error("Error: Webcam tidak ditemukan atau tidak dapat diakses.")
+    else:
+        # Menampilkan video dari webcam secara real-time
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            detected_frame = detect_objects(frame)
+            FRAME_WINDOW.image(detected_frame)
+
+    # Menutup koneksi webcam
+    cap.release()
+
 elif mode == "Upload Video":
     st.write("Mode Upload Video")
+    # Mengunggah file video
     uploaded_video = st.file_uploader("Unggah file video", type=["mp4", "avi", "mov"])
-    
     if uploaded_video:
+        # Menyimpan file video sementara
         temp_file = "temp_video.mp4"
         with open(temp_file, "wb") as f:
             f.write(uploaded_video.read())
 
         cap = cv2.VideoCapture(temp_file)
-        st_frame = st.empty()
+        FRAME_WINDOW = st.image([])
 
+        # Menampilkan video yang diunggah dan mendeteksi objek
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-            
+
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             detected_frame = detect_objects(frame)
-            st_frame.image(detected_frame)
+            FRAME_WINDOW.image(detected_frame)
 
         cap.release()
+
+elif mode == "Upload Image":
+    st.write("Mode Upload Gambar")
+    # Mengunggah file gambar
+    uploaded_image = st.file_uploader("Unggah file gambar", type=["jpg", "png", "jpeg"])
+    if uploaded_image:
+        img = np.array(Image.open(uploaded_image))
+        # Deteksi objek pada gambar yang diunggah
+        detected_image = detect_objects(img)
+        st.image(detected_image, caption="Objek yang Terdeteksi", use_container_width=True)
