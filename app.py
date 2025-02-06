@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# Memuat model YOLOv5 menggunakan Torch Hub
+# Load model YOLOv5 menggunakan Torch Hub
 model = torch.hub.load('ultralytics/yolov5', 'custom', path='D:\\Documents\\dokumen pribadi\\File Telkom\\AI LAB\\Tubes\\Bird_Detection\\best.pt') #Diubah sesuai alamat file model
 
 # UI Aplikasi Streamlit
@@ -20,10 +20,10 @@ def detect_objects(img):
     results = model(img)
     detected_img = img.copy()
     
-    # Menambahkan kotak deteksi dan label pada gambar
+    # Menambahkan bounding box dan label pada gambar
     for detection in results.xyxy[0]:
         x1, y1, x2, y2, conf, cls = detection
-        if conf > 0.5:  # Batas kepercayaan deteksi
+        if conf > 0.5:  # Batas tingkat confidence
             label = f"{model.names[int(cls)]}: {conf:.2f}"
             cv2.rectangle(detected_img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
             cv2.putText(detected_img, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_COMPLEX, 0.9, (255, 0, 0), 2)
