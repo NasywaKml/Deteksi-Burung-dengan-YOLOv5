@@ -4,4 +4,4 @@ pillow
 torch
 torchvision
 numpy
-ultralytics
+ultralytics==8.0.20
